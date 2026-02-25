@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GPS Ultra-Persistente (Fixed Layout)</title>
-    <link rel="icon" type="image/png" href="logo.png">
+    <title>Algarrobo_app_air_control</title>
+     <link rel="icon" type="image/png" href="logo.png">
      <link rel="apple-touch-icon" href="logo.png">
      <meta name="theme-color" content="#4a76c0">
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
@@ -2006,6 +2007,21 @@
                                 // Asegurar que el array tiene longitud suficiente
                                 while (datos[rowIndex].length < 17) datos[rowIndex].push("");
                                 
+                                // --- INICIO NUEVA MODIFICACION ---
+                                const estadoAnterior = datos[rowIndex][10] ? datos[rowIndex][10].toString().toUpperCase() : "NO";
+                                if (estadoAnterior === "SI" && nuevoEstadoProg === "NO") {
+                                    let encendidos = 0;
+                                    datosAires.forEach(aire => {
+                                        if (aire[4] && aire[4].toString() === p && obtenerUltimoEstado(aire[0]) === "ENCENDER") {
+                                            encendidos++;
+                                        }
+                                    });
+                                    if (encendidos > 0) {
+                                        datos[rowIndex][4] = "END_CICLO"; // Guarda en la Columna E (índice 4)
+                                    }
+                                }
+                                // --- FIN NUEVA MODIFICACION ---
+
                                 datos[rowIndex][10] = nuevoEstadoProg;
 
                                 // Actualizar COLUMNAS DE RESPALDO SEGUN MODO
@@ -2014,7 +2030,7 @@
                                     datos[rowIndex][12] = nuevoOff;
                                 } else {
                                     // CAMBIO SOLICITADO: Solo guardar en 14/15 si es individual
-                                    // NO TOCAR LOS INDICES 3 y 4 (Columnas D y E)
+                                    // NO TOCAR LOS INDICES 3 y 4 (Columnas D y E) (A menos que aplique la nueva lógica)
                                     datos[rowIndex][14] = nuevoOn; 
                                     datos[rowIndex][15] = nuevoOff;
                                 }
@@ -2274,5 +2290,4 @@
 
     </script>
 </body>
-
 </html>
