@@ -72,7 +72,7 @@
             text-transform: uppercase; 
             box-shadow: 0 -4px 15px rgba(0,0,0,0.3); 
             flex-shrink: 0; 
-            height: 50px;         
+            height: 50px;        
             display: flex;
             align-items: center;
             justify-content: center;
@@ -344,8 +344,8 @@
             font-weight: bold; font-size: 18px; cursor: pointer;
         }
 
-        /* --- ESTILOS PARA MAPA FULLSCREEN --- */
-        .map-wrapper-fullscreen {
+        /* --- ESTILOS FULLSCREEN MAPA --- */
+        .map-fullscreen {
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
@@ -353,30 +353,20 @@
             height: 100vh !important;
             z-index: 9999 !important;
             margin: 0 !important;
-            padding: 0 !important;
-            background: #1a3a70;
-        }
-        .map-wrapper-fullscreen #mapUbicacion {
-            height: 100% !important;
-            border: none !important;
             border-radius: 0 !important;
         }
+        
         .btn-max-map {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            z-index: 10000;
             background: white;
             color: black;
-            border: 2px solid #ccc;
-            border-radius: 5px;
-            padding: 5px 15px;
             font-weight: bold;
-            cursor: pointer;
             font-size: 16px;
+            padding: 8px 15px;
+            border: 2px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
-
     </style>
 </head>
 <body onload="iniciarSistema()">
@@ -522,10 +512,7 @@
                             <textarea id="motivoTraslado" placeholder="ESCRIBA EL MOTIVO AQUÍ..." oninput="this.value = this.value.toUpperCase()"></textarea>
                         </div>
 
-                        <div id="mapUbicacionWrapper" class="hidden" style="position: relative; margin-top: 10px; width: 100%;">
-                            <button id="btnMaxMap" class="btn-max-map" onclick="toggleFullscreenUbicacion()">MAX</button>
-                            <div id="mapUbicacion" class="map-container" style="height: 350px; margin-top: 0;"></div>
-                        </div>
+                        <div id="mapUbicacion" class="map-container hidden" style="margin-top: 10px; height: 350px;"></div>
 
                     </div>
                 </div>
@@ -1123,15 +1110,6 @@
             document.getElementById('vistaDashboard').scrollTop = 0;
 
             actualizarContadores(0,0);
-
-            // Modificacion 5: Resetear el mapa de ubicación y su botón si estaba expandido
-            const mapWrapper = document.getElementById('mapUbicacionWrapper');
-            if (mapWrapper) {
-                mapWrapper.classList.remove('map-wrapper-fullscreen');
-                mapWrapper.classList.add('hidden');
-                const btnMap = document.getElementById('btnMaxMap');
-                if (btnMap) btnMap.innerText = 'MAX';
-            }
         }
 
         function cambiarVista() {
@@ -2346,35 +2324,63 @@
             cerrarDetallePiscina();
         }
 
-        // --- NUEVA FUNCIÓN PARA CARGAR EL MAPA DE UBICACIÓN (MODIFICADA) ---
+        // --- CONTROL NATIVO PARA PANTALLA COMPLETA ---
+        L.Control.FullscreenBtn = L.Control.extend({
+            onAdd: function(map) {
+                var btn = L.DomUtil.create('button', 'btn-max-map');
+                btn.innerHTML = 'MAX';
+                L.DomEvent.disableClickPropagation(btn); // Evita que se haga clic en el mapa debajo
+                L.DomEvent.on(btn, 'click', function(e) {
+                    var mapContainer = document.getElementById('mapUbicacion');
+                    if (mapContainer.classList.contains('map-fullscreen')) {
+                        mapContainer.classList.remove('map-fullscreen');
+                        btn.innerHTML = 'MAX';
+                    } else {
+                        mapContainer.classList.add('map-fullscreen');
+                        btn.innerHTML = 'MIN';
+                    }
+                    setTimeout(() => map.invalidateSize(), 300); // Reajusta el mapa al nuevo tamaño
+                });
+                return btn;
+            }
+        });
+
+        // --- NUEVA FUNCIÓN PARA CARGAR EL MAPA DE UBICACIÓN ---
         function cargarMapaUbicacion() {
-            const mapWrapper = document.getElementById('mapUbicacionWrapper');
-            if (!mapWrapper) return;
+            const mapDiv = document.getElementById('mapUbicacion');
+            if (!mapDiv) return;
             
-            mapWrapper.classList.remove('hidden');
+            mapDiv.classList.remove('hidden');
 
             if (!mapUbicacion) {
+                // Si hay coordenadas actuales en los inputs invisibles, las usa para centrar inicialmente
                 const lat = document.getElementById('tempLat').value !== "0.000000" ? document.getElementById('tempLat').value : -2.19616;
                 const lon = document.getElementById('tempLon').value !== "0.000000" ? document.getElementById('tempLon').value : -79.8862;
                 
                 mapUbicacion = L.map('mapUbicacion').setView([lat, lon], 14);
 
+                // Capa de satélite de Esri para que se vea como en tu imagen
                 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                     attribution: 'Tiles &copy; Esri'
                 }).addTo(mapUbicacion);
 
                 markersGroupUbicacion = L.layerGroup().addTo(mapUbicacion);
+                
+                // Agregar el botón de pantalla completa
+                new L.Control.FullscreenBtn({ position: 'topright' }).addTo(mapUbicacion);
             } else {
+                // Fuerza al mapa a reajustar su tamaño cuando el div pasa de oculto a visible
                 mapUbicacion.invalidateSize();
             }
 
             markersGroupUbicacion.clearLayers();
             let latlngs = [];
 
+            // datosAires.slice(1) omite los encabezados. 
             datosAires.slice(1).forEach(row => {
                 const nombre = row[0];
-                const marca = row[2] || "---"; 
-                const potencia = row[3] || "---"; 
+                const marca = row[2] || "---"; // Captura MARCA
+                const hp = row[3] || "---";    // Captura HP
                 const piscina = row[4] || "---";
                 const lat = parseFloat(row[7]);
                 const lon = parseFloat(row[8]);
@@ -2382,14 +2388,39 @@
                 if (!isNaN(lat) && !isNaN(lon) && lat !== 0) {
                     latlngs.push([lat, lon]);
                     
+                    // --- LÓGICA DE ESTADO (ON / OFF) ---
+                    const estado = obtenerUltimoEstado(nombre);
+                    const isEncendido = (estado === "ENCENDER");
+                    
+                    // Colores del círculo: Verde si está ON, Azul si está OFF
+                    const markerColor = isEncendido ? '#00b050' : '#0000ff'; 
+                    
+                    // Colores de la etiqueta (Label): Verde si está ON, Rojo si está OFF
+                    const labelBgColor = isEncendido ? '#00b050' : '#ff0000';
+                    const labelText = isEncendido ? 'ON' : 'OFF';
+
+                    // Crea el punto con el color determinado
                     L.circleMarker([lat, lon], {
-                        color: 'AZUL',        
+                        color: 'white',        // Borde blanco
                         weight: 1.5,
-                        fillColor: '#000080',  
+                        fillColor: markerColor,
                         fillOpacity: 0.9,
-                        radius: 7
+                        radius: 8
                     })
-                    .bindTooltip(`<b>${nombre}</b><br>PISCINA: ${piscina}<br><b>MARCA:</b> ${marca}<br><b>POWER (HP):</b> ${potencia}`, { 
+                    // Tooltip actualizado con estructura solicitada
+                    .bindTooltip(`
+                        <div style="font-family: Arial; text-align: center; line-height: 1.4;">
+                            <b style="font-size: 13px;">${nombre}</b><br>
+                            PISCINA: ${piscina}<br>
+                            <b>MARCA:</b> ${marca}<br>
+                            <b>POWER (HP):</b> ${hp}<br>
+                            <div style="margin-top: 6px;">
+                                <span style="background-color: ${labelBgColor}; color: white; padding: 3px 15px; border-radius: 4px; font-weight: bold; border: 1px solid black; display: inline-block;">
+                                    ${labelText}
+                                </span>
+                            </div>
+                        </div>
+                    `, { 
                         direction: 'top', 
                         className: 'custom-tooltip' 
                     })
@@ -2397,28 +2428,10 @@
                 }
             });
 
+            // Ajustar el zoom y la vista automáticamente para que entren todos los puntos
             if (latlngs.length > 0) {
                 mapUbicacion.fitBounds(latlngs, { padding: [20, 20] });
             }
-        }
-
-        function toggleFullscreenUbicacion() {
-            const wrapper = document.getElementById('mapUbicacionWrapper');
-            const btn = document.getElementById('btnMaxMap');
-            if (!wrapper) return;
-
-            if (wrapper.classList.contains('map-wrapper-fullscreen')) {
-                wrapper.classList.remove('map-wrapper-fullscreen');
-                btn.innerText = 'MAX';
-            } else {
-                wrapper.classList.add('map-wrapper-fullscreen');
-                btn.innerText = 'MIN';
-            }
-
-            // Recalcula el tamaño del mapa para evitar que se vea cortado o gris
-            setTimeout(() => {
-                if (mapUbicacion) mapUbicacion.invalidateSize();
-            }, 300);
         }
 
     </script>
