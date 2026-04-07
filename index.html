@@ -367,6 +367,23 @@
             cursor: pointer;
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
+
+        /* --- ESTILOS PARA EL MAPA EN EL MODAL DE PISCINA --- */
+        .btn-ubicacion-container {
+            display: flex; justify-content: flex-end; padding: 0 5px 5px 5px;
+        }
+        .btn-ubicacion-modal {
+            background: white; color: black; font-weight: bold; font-size: 16px;
+            padding: 5px 15px; border-radius: 8px; border: 1px solid #ccc;
+            cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        .modal-map-wrapper {
+            background-color: #4a76c0; border: 2px solid white;
+            margin: 0 5px 5px 5px; flex: 1; display: flex; flex-direction: column; overflow: hidden;
+        }
+        #mapModalPiscina {
+            flex: 1; width: 100%; z-index: 1;
+        }
     </style>
 </head>
 <body onload="iniciarSistema()">
@@ -617,15 +634,21 @@
                     </div>
                 </div>
 
-                <div class="modal-table-container">
+                <div class="btn-ubicacion-container">
+                    <button class="btn-ubicacion-modal" id="btnToggleMapaModal" onclick="toggleMapaModal()">Ubicación</button>
+                </div>
+
+                <div class="modal-table-container" id="contenedorTablaModal">
                     <div class="list-header">
                         <div>AIREADOR</div>
                         <div>POTENCIA (HP)</div>
                         <div>ON/OFF AUTM</div>
                     </div>
+                    <div id="listaDetalleAireadores" class="list-body"></div>
+                </div>
 
-                    <div id="listaDetalleAireadores" class="list-body">
-                    </div>
+                <div class="modal-map-wrapper hidden" id="contenedorMapaModal">
+                    <div id="mapModalPiscina"></div>
                 </div>
 
                 <div style="padding: 10px; background: #4a76c0;">
@@ -648,6 +671,12 @@
         // NUEVAS VARIABLES PARA EL MAPA DE UBICACION
         let mapUbicacion = null;
         let markersGroupUbicacion = null;
+
+        // NUEVAS VARIABLES PARA EL MAPA DEL MODAL
+        let mapModal = null;
+        let markersGroupModal = null;
+        let vistaMapaModalActiva = false;
+        let modalMapMarkers = {}; // Para cambiar colores en tiempo real
 
         let cachedPuntosON = [];
         let cachedPuntosOFF = [];
@@ -954,16 +983,13 @@
 
             datosAires = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false });
             
-            // --- MODIFICACION 2: CARGAR CONFIGURACIÓN GLOBAL DESDE DB (Indices 11, 12) ---
             const sheetDB = wb.Sheets["DB"];
             if (sheetDB) {
                 const dataDB = XLSX.utils.sheet_to_json(sheetDB, { header: 1, raw: false });
                 if (dataDB.length > 1) {
-                    // Columna 14 (índice 13): Modo Global (1=SI, 0=NO)
                     const modoDb = dataDB[1][13] ? dataDB[1][13].toString() : "1"; 
                     modoGlobalActivo = (modoDb === "1");
                     
-                    // MOD 2: COLUMNA 12 (Index 11) para H_ON y COLUMNA 13 (Index 12) para H_OFF (GLOBALES)
                     horaOnGlobal = dataDB[1][11] ? dataDB[1][11].toString() : "";
                     horaOffGlobal = dataDB[1][12] ? dataDB[1][12].toString() : "";
                 }
@@ -1095,7 +1121,6 @@
             document.getElementById('listaAsignacionBody').innerHTML = "";
             document.getElementById('piscinaSelect').value = "";
             document.getElementById('aireadorSelect').value = "";
-            // Limpieza de campos globales se maneja ahora en toggleModoGlobal
             document.getElementById('mantenimientoSubSelect').value = "";
             document.getElementById('opcionReporteSelect').value = "";
             document.getElementById('ub_nombre_aire').innerText = "---";
@@ -1145,7 +1170,6 @@
                 document.getElementById('mainActionBtn').classList.remove('hidden');
                 actualizarSelectsGlobales(); 
                 
-                // NUEVO: Llamada para renderizar el mapa de ubicación
                 setTimeout(() => { cargarMapaUbicacion(); }, 300);
 
             } else if (op === "HABILITAR_PS") {
@@ -1171,7 +1195,6 @@
                 const today = new Date();
                 document.getElementById('fechaMapa').value = today.toISOString().split('T')[0];
                 
-                // Llenar select de usuarios
                 const selUser = document.getElementById('mapaUsuarioSelect');
                 selUser.innerHTML = '<option value="">SELECCIONE USUARIO</option>';
                 const sheetDB = wb.Sheets["DB"];
@@ -1189,7 +1212,6 @@
             } else {
                 const ctrl = document.getElementById('vistaControl'); if(ctrl){ ctrl.classList.remove('hidden'); ctrl.style.display = 'flex'; }
                 document.getElementById('piscinaRow').classList.remove('hidden');
-                // MOD 1: SI ES ON_OFF_BLOQUE, NO MOSTRAR CONTADORES. SI NO, SI.
                 if (op === "ON_OFF_BLOQUE") {
                     document.getElementById('contadoresIndividuales').classList.add('hidden');
                 } else {
@@ -1779,16 +1801,13 @@
                 const filaDB = infoHabilitacion.find(f => f[0] === p);
                 if (filaDB && filaDB[1] === "DESHABILITADA") return;
 
-                // MOD 3: Si es Global, usar columnas 12/13. Si es Individual, usar 15/16.
                 let db_hOn = "";
                 let db_hOff = "";
 
                 if (modoGlobalActivo) {
-                    // Col 12 (idx 11) y 13 (idx 12)
                     db_hOn = (filaDB && filaDB[11]) ? filaDB[11] : ""; 
                     db_hOff = (filaDB && filaDB[12]) ? filaDB[12] : ""; 
                 } else {
-                    // Col 15 (idx 14) y 16 (idx 15)
                     db_hOn = (filaDB && filaDB[14]) ? filaDB[14] : ""; 
                     db_hOff = (filaDB && filaDB[15]) ? filaDB[15] : ""; 
                 }
@@ -1855,7 +1874,6 @@
                 globalOff.setAttribute('readonly', true);
             }
 
-            // MOD 3: ACTUALIZAR HORARIOS SEGUN EL MODO AL CAMBIAR EL SWITCH
             listaPiscinas.forEach(p => {
                 const inputOn = document.getElementById(`hon_${p}`);
                 const inputOff = document.getElementById(`hoff_${p}`);
@@ -1866,7 +1884,6 @@
                         inputOn.setAttribute('readonly', true);
                         inputOff.setAttribute('readonly', true);
                         
-                        // Leer de Col 12 (idx 11) y 13 (idx 12) de la hoja de piscinas
                         const filaDB = datos.find(f => f[0] === p);
                         if(filaDB) {
                             inputOn.value = filaDB[11] || "";
@@ -1876,14 +1893,12 @@
                         inputOn.removeAttribute('readonly');
                         inputOff.removeAttribute('readonly');
 
-                        // Leer de Col 15 (idx 14) y 16 (idx 15) de la hoja de piscinas
                         const filaDB = datos.find(f => f[0] === p);
                         if(filaDB) {
                             inputOn.value = filaDB[14] || "";
                             inputOff.value = filaDB[15] || "";
                         }
                     }
-                    // Actualizar memoria si está activo
                     if (chk && chk.checked) {
                         piscinasProgramadas[p] = { hOn: inputOn.value, hOff: inputOff.value };
                     }
@@ -2013,18 +2028,15 @@
                     const datos = XLSX.utils.sheet_to_json(hPisSheet, { header: 1, raw: false });
                     let cambiosCount = 0;
 
-                    // 1. Guardar estado de la modalidad y horarios globales en DB (fila 0, cols 13, 11, 12)
                     const sheetDB = wb.Sheets["DB"];
                     const dataDB = XLSX.utils.sheet_to_json(sheetDB, { header: 1, raw: false });
                     if (dataDB.length > 1) {
                         dataDB[1][13] = modoGlobalActivo ? "1" : "0";
-                        // MOD 2: Guardar los Globales Maestros en DB Col 12/13
                         dataDB[1][11] = document.getElementById('globalHoraOn').value;
                         dataDB[1][12] = document.getElementById('globalHoraOff').value;
                         wb.Sheets["DB"] = XLSX.utils.aoa_to_sheet(dataDB);
                     }
 
-                    // 2. Guardar horarios en hoja de piscinas
                     listaPiscinas.forEach(p => {
                         if (p === "TALLER") return;
 
@@ -2037,13 +2049,10 @@
                             let nuevoOff = inputOff.value;
                             const nuevoEstadoProg = chk.checked ? "SI" : "NO";
 
-                            // MOD 4: ACTUALIZAR REGISTROS DE DATA AL GUARDAR
                             const rowIndex = datos.findIndex(row => row[0] === p);
                             if (rowIndex !== -1) {
-                                // Asegurar que el array tiene longitud suficiente
                                 while (datos[rowIndex].length < 17) datos[rowIndex].push("");
                                 
-                                // --- INICIO NUEVA MODIFICACION ---
                                 const estadoAnterior = datos[rowIndex][10] ? datos[rowIndex][10].toString().toUpperCase() : "NO";
                                 if (estadoAnterior === "SI" && nuevoEstadoProg === "NO") {
                                     let encendidos = 0;
@@ -2053,20 +2062,16 @@
                                         }
                                     });
                                     if (encendidos > 0) {
-                                        datos[rowIndex][4] = "END_CICLO"; // Guarda en la Columna E (índice 4)
+                                        datos[rowIndex][4] = "END_CICLO"; 
                                     }
                                 }
-                                // --- FIN NUEVA MODIFICACION ---
 
                                 datos[rowIndex][10] = nuevoEstadoProg;
 
-                                // Actualizar COLUMNAS DE RESPALDO SEGUN MODO
                                 if (modoGlobalActivo) {
-                                    datos[rowIndex][11] = nuevoOn; // Guardar como último Global usado
+                                    datos[rowIndex][11] = nuevoOn; 
                                     datos[rowIndex][12] = nuevoOff;
                                 } else {
-                                    // CAMBIO SOLICITADO: Solo guardar en 14/15 si es individual
-                                    // NO TOCAR LOS INDICES 3 y 4 (Columnas D y E) (A menos que aplique la nueva lógica)
                                     datos[rowIndex][14] = nuevoOn; 
                                     datos[rowIndex][15] = nuevoOff;
                                 }
@@ -2219,13 +2224,18 @@
             document.getElementById('dtl_titulo_piscina').innerText = piscina;
             document.getElementById('vistaDetallePiscina').classList.remove('hidden');
 
+            // Resetear la vista a Lista siempre que se abre el modal
+            vistaMapaModalActiva = false;
+            document.getElementById('btnToggleMapaModal').innerText = "Ubicación";
+            document.getElementById('contenedorMapaModal').classList.add('hidden');
+            document.getElementById('contenedorTablaModal').classList.remove('hidden');
+
             let hectareas = 0;
             const sheetDB = wb.Sheets["DB"];
             if (sheetDB) {
                 const dataDB = XLSX.utils.sheet_to_json(sheetDB, { header: 1, raw: false });
                 const row = dataDB.find(r => r[0] && r[0].toString() === piscina);
                 
-                // CAMBIO SOLICITADO: Leer hectáreas de Columna D (Indice 3) en lugar de C (Indice 2)
                 if (row && row[3]) {
                     hectareas = parseFloat(row[3]) || 0;
                 }
@@ -2255,7 +2265,7 @@
                     <div class="col-aire">${aire[0]}</div>
                     <div class="col-hp">${hp}</div>
                     <div class="col-chk">
-                        <input type="checkbox" class="check-custom" 
+                        <input type="checkbox" id="chk_list_${aire[0]}" class="check-custom" 
                                onchange="actualizarCalculosModal('${aire[0]}', this.checked)" 
                                ${isWillOn ? 'checked' : ''}>
                     </div>
@@ -2272,6 +2282,85 @@
             recalcularDinamicosModal(hectareas, hpHctInst);
         }
 
+        function toggleMapaModal() {
+            vistaMapaModalActiva = !vistaMapaModalActiva;
+            const btn = document.getElementById('btnToggleMapaModal');
+            const contTabla = document.getElementById('contenedorTablaModal');
+            const contMapa = document.getElementById('contenedorMapaModal');
+
+            if (vistaMapaModalActiva) {
+                btn.innerText = "Ver Lista";
+                contTabla.classList.add('hidden');
+                contMapa.classList.remove('hidden');
+                setTimeout(() => { cargarMapaModalPiscina(); }, 300); // Dar tiempo al render
+            } else {
+                btn.innerText = "Ubicación";
+                contMapa.classList.add('hidden');
+                contTabla.classList.remove('hidden');
+            }
+        }
+
+        function cargarMapaModalPiscina() {
+            if (!mapModal) {
+                const lat = document.getElementById('tempLat').value !== "0.000000" ? document.getElementById('tempLat').value : -2.19616;
+                const lon = document.getElementById('tempLon').value !== "0.000000" ? document.getElementById('tempLon').value : -79.8862;
+                mapModal = L.map('mapModalPiscina').setView([lat, lon], 15);
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: 'Tiles &copy; Esri'
+                }).addTo(mapModal);
+                markersGroupModal = L.layerGroup().addTo(mapModal);
+            } else {
+                mapModal.invalidateSize();
+            }
+
+            markersGroupModal.clearLayers();
+            modalMapMarkers = {}; // Limpiar referencias de marcadores
+            let latlngs = [];
+
+            const airesPool = datosAires.slice(1).filter(a => a[4] && a[4].toString() === currentPoolDetail);
+
+            airesPool.forEach(row => {
+                const nombre = row[0];
+                const marca = row[2] || "---"; // Capturamos la MARCA
+                const hp = row[3] || "---";
+                const lat = parseFloat(row[7]);
+                const lon = parseFloat(row[8]);
+
+                if (!isNaN(lat) && !isNaN(lon) && lat !== 0) {
+                    latlngs.push([lat, lon]);
+                    
+                    // Obtenemos el estado de programación desde el array temporal para que refleje si ha sido editado
+                    const tempItem = poolDetailTemp.find(x => x.id === nombre);
+                    const isWillOn = tempItem ? tempItem.willOn : false;
+
+                    // El color inicial ahora depende de si está seleccionado (isWillOn)
+                    const markerColor = isWillOn ? '#00b050' : '#0000ff'; 
+
+                    const marker = L.circleMarker([lat, lon], {
+                        color: 'white', weight: 1.5, fillColor: markerColor, fillOpacity: 0.9, radius: 8
+                    }).bindPopup(`
+                        <div style="font-family: Arial; text-align: center; line-height: 1.4; min-width: 110px;">
+                            <b style="font-size: 14px;">${nombre}</b><br>
+                            <b>MARCA:</b> ${marca}<br>
+                            <b>HP:</b> ${hp}<br>
+                            <div style="margin-top: 6px; display: flex; justify-content: center; align-items: center;">
+                                <input type="checkbox" style="width: 25px; height: 25px; cursor: pointer; accent-color: #548235;" 
+                                       onchange="actualizarDesdeMapa('${nombre}', this.checked)" 
+                                       ${isWillOn ? 'checked' : ''}>
+                            </div>
+                        </div>
+                    `).addTo(markersGroupModal);
+
+                    // Guardar referencia del marcador para actualizarlo en tiempo real
+                    modalMapMarkers[nombre] = marker;
+                }
+            });
+
+            if (latlngs.length > 0) {
+                mapModal.fitBounds(latlngs, { padding: [20, 20] });
+            }
+        }
+
         function actualizarCalculosModal(idAire, isChecked) {
             const item = poolDetailTemp.find(x => x.id === idAire);
             if(item) item.willOn = isChecked;
@@ -2279,6 +2368,24 @@
             let hectareas = parseFloat(document.getElementById('dtl_hectareas').innerText) || 0;
             let hpHctInst = parseFloat(document.getElementById('val_hp_inst_ha').innerText) || 0;
             recalcularDinamicosModal(hectareas, hpHctInst);
+        }
+
+        function actualizarDesdeMapa(idAire, isChecked) {
+            // Actualizamos los contadores y las barras de arriba reutilizando tu lógica
+            actualizarCalculosModal(idAire, isChecked);
+            
+            // Sincronizamos el checkbox oculto en la vista de lista para que no pierda el estado
+            const chkList = document.getElementById('chk_list_' + idAire);
+            if (chkList) {
+                chkList.checked = isChecked;
+            }
+
+            // Cambiar el color del marcador en el mapa en tiempo real
+            if (modalMapMarkers && modalMapMarkers[idAire]) {
+                modalMapMarkers[idAire].setStyle({
+                    fillColor: isChecked ? '#00b050' : '#0000ff'
+                });
+            }
         }
 
         function recalcularDinamicosModal(hectareas, hpHctInst) {
