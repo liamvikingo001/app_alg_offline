@@ -90,7 +90,7 @@
         }
 
         /* --- ESTILOS DECORATIVOS PANELES NARANJAS (3D) --- */
-        .label-box, .chart-title, .stat-label, .bar-label, .motivo-header, .asig-title, .login-label, .header-item, .list-header { 
+        .label-box, .stat-label, .bar-label, .motivo-header, .asig-title, .login-label, .header-item, .list-header { 
             background: linear-gradient(to bottom, #e87b28, #c65911); 
             box-shadow: inset 0 2px 2px rgba(255,255,255,0.4), 0 3px 5px rgba(0,0,0,0.4);
             border: 1px solid #8e3e00; 
@@ -108,7 +108,7 @@
         }
 
         /* --- PANELES DIGITALES/LCD (Ámbar/Amarillo) --- */
-        .count-value, .stat-value, .badge, input[type="time"], input[type="text"], input[type="date"], input[type="password"], select, textarea { 
+        .count-value, .stat-value, input[type="time"], input[type="text"], input[type="date"], input[type="password"], textarea { 
             background: #d4a942; 
             box-shadow: inset 0 3px 6px rgba(0,0,0,0.6);
             border: 1px solid #7a5c17; 
@@ -122,8 +122,27 @@
             padding: 8px; 
             height: 40px; 
         }
-        input[readonly], select[disabled] { 
+        input[readonly] { 
             background: #9a8040; color: #444; cursor: not-allowed; 
+        }
+
+        /* --- NUEVO ESTILO BLANCO PARA LOS SELECTS --- */
+        select {
+            background: #ffffff;
+            color: #222;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            font-size: 18px;
+            text-align: center;
+            border-radius: 4px;
+            width: 100%;
+            padding: 8px;
+            height: 40px;
+            border: 1px solid #ccc;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        select[disabled] { 
+            background: #e0e0e0; color: #666; cursor: not-allowed; 
         }
 
         .gps-status-bar {
@@ -153,10 +172,48 @@
         .scrollable-list { overflow-y: auto; flex-grow: 1; width: 100%; background-color: transparent; -webkit-overflow-scrolling: touch; padding-bottom: 10px; }
         
         .dashboard-view { display: flex; flex-direction: column; gap: 10px; padding: 10px; overflow-y: auto; flex-grow: 1; }
-        .chart-card { background: linear-gradient(to bottom, #e6e9ef, #b0b8c4); border: 2px solid #8b95a5; padding: 10px; display: flex; flex-direction: column; align-items: center; position: relative; border-radius: 8px; flex-shrink: 0; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        
+        /* --- NUEVO ESTILO BLANCO PARA CARTAS DE GRAFICOS --- */
+        .chart-card { 
+            background: #ffffff; 
+            border: 3px solid #1e355c; 
+            padding: 10px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            position: relative; 
+            border-radius: 4px; 
+            flex-shrink: 0; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
+        }
+        
+        /* --- NUEVO ESTILO PARA TITULO DE GRAFICOS --- */
+        .chart-title {
+            color: #1e355c;
+            font-size: 14px;
+            font-weight: 900;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+
         .canvas-container { width: 100%; height: 140px; position: relative; }
         
-        .badge { position: absolute; bottom: 40px; border: 2px solid #222; padding: 3px 0; z-index: 10; width: 50px; }
+        /* --- NUEVO ESTILO PARA BADGES --- */
+        .badge { 
+            position: absolute; 
+            bottom: 40px; 
+            background: #ffffff; 
+            border: 2px solid #ff0000; 
+            color: #000000; 
+            font-family: Arial, sans-serif; 
+            font-weight: 900; 
+            font-size: 14px;
+            padding: 3px 0; 
+            z-index: 10; 
+            width: 50px; 
+            text-align: center;
+        }
         .badge-left { left: 15px; }
         .badge-right { right: 15px; }
 
@@ -2065,8 +2122,8 @@
             const vTall = document.getElementById('valTall'); if(vTall) vTall.innerText = enTaller;
 
             if(document.getElementById('chartAires')) renderPie('chartAires', ['ENCENDIDOS', 'APAGADOS'], [enc, apa], ['#28a745', '#dc3545']);
-            if(document.getElementById('chartPiscinas')) renderPie('chartPiscinas', ['HABILITADAS', 'DESHABILITADAS'], [hab, des], ['#e87b28', '#3b5a8c']);
-            if(document.getElementById('chartTipos')) renderPie('chartTipos', ['ELECTRICOS', 'MECANICOS'], [elec, mec], ['#d4a942', '#333']);
+            if(document.getElementById('chartPiscinas')) renderPie('chartPiscinas', ['HABILITADAS', 'DESHABILITADAS'], [hab, des], ['#5cb85c', '#5bc0de']);
+            if(document.getElementById('chartTipos')) renderPie('chartTipos', ['ELECTRICOS', 'MECANICOS'], [elec, mec], ['#4472c4', '#ed7d31']);
             if(document.getElementById('chartOperativos')) renderPie('chartOperativos', ['OPERATIVOS', 'EN TALLER'], [operativos, enTaller], ['#28a745', '#dc3545']);
         }
 
